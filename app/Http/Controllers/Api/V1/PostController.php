@@ -7,6 +7,7 @@ use App\Http\Requests\StorePostRequest;
 use App\Http\Resources\PostResource;
 use App\Models\post;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class PostController extends Controller
 {
@@ -15,7 +16,12 @@ class PostController extends Controller
      */
     public function index()
     {
-        return PostResource::collection(post::with('author')->paginate(2));
+        // $user = request()->user();
+        // $posts = $user->posts()->paginate();
+        $user = request()->user();
+        $posts = $user->posts()->paginate();
+
+        return PostResource::collection($posts);
     }
 
     /**
@@ -25,7 +31,7 @@ class PostController extends Controller
     {
         $data = $request->validated();
 
-        $data['author_id'] = 1;
+        $data['author_id'] = $request->user()->id;
 
         $post = post::create($data);
 
@@ -38,8 +44,9 @@ class PostController extends Controller
      */
     public function show(post $post)
     {
-        return new PostResource ($post);
-
+        abort_if(Auth::id() != $post->author_id, 403, 'Unauthorized');
+        
+        return new PostResource($post);
         // ->header('Test', 'Emmnanuel')
         // ->header('Test2', 'EmmnanuelTobi')
         // ->setStatusCode(201);
@@ -50,8 +57,11 @@ class PostController extends Controller
      */
     public function update(Request $request, post $post)
     {
+
+        abort_if(Auth::id() != $post->author_id, 403, 'Unauthorized');
+        
         $data = $request->validate([
-            "title" => 'required|string|min:2',
+            'title' => 'required|string|min:2',
             'body' => ['required', 'string', 'min:2'],
         ]);
 
@@ -66,8 +76,9 @@ class PostController extends Controller
      */
     public function destroy(post $post)
     {
+        abort_if(Auth::id() != $post->author_id, 403, 'Unauthorized');
+        
         $post->delete();
- 
         return response()->noContent();
     }
 }
